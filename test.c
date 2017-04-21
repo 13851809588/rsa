@@ -1,4 +1,31 @@
+/**
+  Copyright (C) 2017 Odzhan. All Rights Reserved.
 
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+  1. Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+
+  2. Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+  3. The name of the author may not be used to endorse or promote products
+  derived from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY AUTHORS "AS IS" AND ANY EXPRESS OR
+  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,32 +36,34 @@
 
 char* getparam (int argc, char *argv[], int *i)
 {
-  int n=*i;
-  if (argv[n][2] != 0) {
-    return &argv[n][2];
-  }
-  if ((n+1) < argc) {
-    *i=n+1;
-    return argv[n+1];
-  }
-  printf ("  [ %c%c requires parameter\n", argv[n][0], argv[n][1]);
-  exit (0);
+    int n=*i;
+    if (argv[n][2] != 0) {
+      return &argv[n][2];
+    }
+    if ((n+1) < argc) {
+      *i=n+1;
+      return argv[n+1];
+    }
+    printf ("  [ %c%c requires parameter\n", argv[n][0], argv[n][1]);
+    exit (0);
 }
 
 void usage (void)
 {
-  printf("  [ usage: rsa_test [options]\n");
-  printf("     -sign   file     sign digest using private key in file\n");
-  printf("     -verify file     verify a signature using public key in file\n");
-  printf("     -out filename    output to filename rather than stdout\n");
-  printf("     -signature file  signature to verify\n\n");
-  exit (0);
+    printf("  [ usage: rsa_test [options]\n");
+    printf("     -sign   file     sign digest using private key in file\n");
+    printf("     -verify file     verify a signature using public key in file\n");
+    printf("     -out filename    output to filename rather than stdout\n");
+    printf("     -signature file  signature to verify\n\n");
+    exit (0);
 }
 
 int main(int argc, char *argv[])
 {
   int  i, g=0, s=0, v=0;
   char opt;
+  char *file, *sig;
+  int  keyLen;
   RSA  *rsa;
   
   printf ("\n\n  [ RSA test for Crypto API\n\n");

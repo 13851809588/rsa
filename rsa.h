@@ -58,17 +58,20 @@ typedef struct _RSA_t {
 extern "C" {
 #endif
 
-  RSA* rsa_open(void);
-  int rsa_genkey(RSA*, int);
-  
-  int rsa_load(RSA*, const char*, int);
-  int rsa_load_file(RSA*, const char*, int);
-  
-  int rsa_save(RSA*, const char*, int);
-  int rsa_save_file(RSA*, const char*, int);
-  
+  RSA* rsa_open(void);  
   void rsa_close(RSA*);
-  const char *rsa_error(void);
+  
+  int rsa_genkey(RSA*, int);
+
+  int rsa_write_pem(int, LPVOID, DWORD, const char*); 
+  LPVOID rsa_read_pem(const char*, PDWORD);
+
+  int rsa_read_key(RSA*, const char*, int);   
+  int rsa_write_key(RSA*, const char*, int);
+  
+  int rsa_verify(RSA*, const char*, const char*);
+  int rsa_sign(RSA*, const char*, const char*);
+  int rsa_hash(RSA*, const char*);
 
 #ifdef __cplusplus
 }
