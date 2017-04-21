@@ -45,11 +45,12 @@
 
 #define RSA_PUBLIC_KEY  1
 #define RSA_PRIVATE_KEY 2
+#define RSA_SIGNATURE   3
 
 typedef struct _RSA_t {
   HCRYPTPROV prov;
   HCRYPTKEY  privkey, pubkey;
-  DATA_BLOB  priv, pub;
+  HCRYPTHASH hash;
   DWORD      error;
 } RSA;
 
