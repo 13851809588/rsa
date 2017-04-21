@@ -34,7 +34,7 @@
  * convert base64 string to binary
  *
  */    
-LPVOID b64tobin (LPVOID in, DWORD inLen, DWORD flags, PDWORD outLen) 
+LPVOID b64tobin (const char *in, DWORD inLen, DWORD flags, PDWORD outLen) 
 {
     LPVOID out = NULL;
     

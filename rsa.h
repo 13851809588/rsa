@@ -34,8 +34,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stddef.h>
+#include <sys/stat.h>
 
 #include "encode.h"
+
+#ifdef _MSC_VER
+#pragma comment (lib, "advapi32.lib")
+#endif
 
 #define RSA_PUBLIC_KEY  1
 #define RSA_PRIVATE_KEY 2
