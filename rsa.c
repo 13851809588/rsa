@@ -101,7 +101,7 @@ int rsa_genkey(RSA* rsa, int keyLen)
     }
 
     // generate key pair
-    CryptGenKey(rsa->prov, CALG_RSA_KEYX,
+    CryptGenKey(rsa->prov, CALG_RSA_SIGN,
       (keyLen << 16) | CRYPT_EXPORTABLE,
       &rsa->privkey);
 
@@ -137,6 +137,8 @@ int rsa_write_pem(int pemType,
 
     b64 = bintob64(data, dataLen, CRYPT_STRING_NOCR);
 
+    printf ("\nok %s", b64);
+    
     if (b64 != NULL) {
       out = fopen(ofile, "wb");
 
@@ -295,11 +297,12 @@ int rsa_write_key(RSA* rsa,
             X509_PUBLIC_KEY_INFO, pki, 0,
             NULL, derData, &derLen);
 
+            printf ("\nwriting");
           // write to PEM file
           rsa_write_pem(RSA_PUBLIC_KEY, derData, derLen, ofile);
           xfree(derData);
-        }
-      }
+        } else printf ("\nCryptExportPublicKeyInfo");
+      } else printf ("\nCryptExportPublicKeyInfo %i", GetLastError());
     } else {
       if (CryptExportPKCS8(rsa->prov, AT_SIGNATURE,
           szOID_RSA_RSA, 0, NULL, NULL, &pkiLen))
