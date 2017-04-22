@@ -34,19 +34,6 @@
 
 #include "rsa.h"
 
-void test_sign(void) {
-  RSA *rsa = rsa_open();
-  
-  if (rsa != NULL) {
-    if (rsa_read_key(rsa, "private.pem", RSA_PRIVATE_KEY)) {
-      if (rsa_sign(rsa, "private.pem", "signature.txt")) {
-        printf ("\nsigned");
-      } else printf ("\nrsa_sign");
-    } else printf ("\nrsa_read_key");
-    rsa_close(rsa);
-  } else printf ("\nrsa_open");
-}
-
 int main(int argc, char *argv[])
 {
     RSA  *rsa;
@@ -55,11 +42,28 @@ int main(int argc, char *argv[])
     
     if (rsa != NULL) {
       if (rsa_genkey(rsa, 1024)) {
+        
+        // save keys
         rsa_write_key(rsa, "public.pem",  RSA_PUBLIC_KEY);
         rsa_write_key(rsa, "private.pem", RSA_PRIVATE_KEY);
         
-        test_sign();
+        rsa_sign(rsa, "private.pem", "signature.txt"); 
         
+        // close
+        rsa_close(rsa);   
+        
+        // open
+        rsa = rsa_open();  
+        
+        if (rsa_read_key(rsa, "public.pem",  RSA_PUBLIC_KEY))
+        {
+          printf ("\nimported public key");
+          if (rsa_read_key(rsa, "private.pem", RSA_PRIVATE_KEY))
+          {
+            printf ("\nimported private key");                       
+            rsa_verify(rsa, "private.pem", "signature.txt");
+          }
+        }        
       } else printf ("\nrsa_genkey() failed");
       rsa_close(rsa);
     } else printf ("\nrsa_open() failed");

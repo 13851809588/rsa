@@ -40,16 +40,14 @@ LPVOID b64tobin (const char *in, DWORD inLen, DWORD flags, PDWORD outLen)
     
     // calculate how much space required
     if (CryptStringToBinary(in, inLen,
-        CRYPT_STRING_BASE64 | flags, 
-        NULL, outLen, NULL, NULL))
+        flags, NULL, outLen, NULL, NULL))
     {
       out = xmalloc(*outLen);
           
       if (out != NULL) {
         // decode base64     
         CryptStringToBinary(in, inLen,
-            CRYPT_STRING_BASE64 | flags, 
-            out, outLen, NULL, NULL);
+            flags, out, outLen, NULL, NULL);
       }
     }
     return out;
