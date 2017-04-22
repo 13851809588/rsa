@@ -29,25 +29,6 @@
 
 #include "rsa.h"
 
-void xstrerror (const char fmt[], ...) 
-{
-  char    *error;
-  va_list arglist;
-  char    buffer[2048];
-  
-  va_start (arglist, fmt);
-  vsnprintf (buffer, sizeof(buffer) - 1, fmt, arglist);
-  va_end (arglist);
-  
-  FormatMessage (
-      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, GetLastError (), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-      (LPSTR)&error, 0, NULL);
-
-  printf ("\n[ %s : %s", buffer, error);
-  LocalFree (error);
-}
-
 /**
  *
  * open CSP and return pointer to RSA object
@@ -113,7 +94,9 @@ void rsa_close(RSA *rsa)
  */
 int rsa_genkey(RSA* rsa, int keyLen)
 {
-    if (rsa==NULL) return -1;
+    BOOL ok = FALSE;
+    
+    if (rsa==NULL) return 0;
 
     // release public
     if (rsa->pubkey != 0) {
@@ -128,15 +111,11 @@ int rsa_genkey(RSA* rsa, int keyLen)
     }
 
     // generate key pair for signing
-    if (!CryptGenKey(rsa->prov, AT_KEYEXCHANGE,
+    ok = CryptGenKey(rsa->prov, AT_KEYEXCHANGE,
       (keyLen << 16) | CRYPT_EXPORTABLE,
-      &rsa->privkey))
-    {
-      xstrerror("CryptGenKey");
-    }
+      &rsa->privkey);
 
-    rsa->error = GetLastError();
-    return rsa->error == ERROR_SUCCESS;
+    return ok;
 }
 
 /**
@@ -162,8 +141,8 @@ int rsa_write_pem(int pemType,
       s = "-----BEGIN PUBLIC KEY-----\n";
       e = "-----END PUBLIC KEY-----\n";
     } else if (pemType == RSA_SIGNATURE) {
-      s = "-----BEGIN PGP SIGNATURE-----\n";
-      e = "-----END PGP SIGNATURE-----\n";
+      s = "-----BEGIN RSA SIGNATURE-----\n";
+      e = "-----END RSA SIGNATURE-----\n";
     }
 
     b64 = bintob64(data, dataLen, 
@@ -237,8 +216,6 @@ int rsa_read_key(RSA* rsa,
     DWORD                   pkiLen, derLen, keyLen;
     BOOL                    ok=FALSE;
     
-    rsa->error = ERROR_SUCCESS;
-    
     // decode base64 string ignoring headers
     derData = rsa_read_pem(ifile, &derLen);
 
@@ -258,10 +235,9 @@ int rsa_read_key(RSA* rsa,
           ok = CryptImportPublicKeyInfo(rsa->prov, X509_ASN_ENCODING, 
             (PCERT_PUBLIC_KEY_INFO)keyData, &rsa->pubkey);
 
-          xstrerror("CryptImportPublicKeyInfo");         
           // release allocated memory
           LocalFree(keyData);
-        } else xstrerror("CryptDecodeObjectEx");
+        } 
       } else {
         // convert the PKCS#8 data to private key info
         if (CryptDecodeObjectEx(
@@ -284,16 +260,15 @@ int rsa_read_key(RSA* rsa,
             ok = CryptImportKey(rsa->prov, keyData, keyLen,
                 0, CRYPT_EXPORTABLE, &rsa->privkey);
             
-            xstrerror("CryptImportKey");            
             // release data
             LocalFree(keyData);
-          } else xstrerror("CryptDecodeObjectEx");
+          } 
           // release private key info
           LocalFree(pki);          
-        } else xstrerror("CryptDecodeObjectEx");
+        } 
       }
       xfree(derData);
-    } else xstrerror("rsa_read_pem");
+    } 
     return ok;
 }
 
@@ -311,40 +286,47 @@ int rsa_write_key(RSA* rsa,
 {
     DWORD  pkiLen, derLen;
     LPVOID pki, derData;
-
+    BOOL   ok=FALSE;
+    
+    // public key?
     if (pemType == RSA_PUBLIC_KEY)
     {
+      // get size of public key info
       if (CryptExportPublicKeyInfo(rsa->prov, AT_KEYEXCHANGE,
           X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
           NULL, &pkiLen))
       {
-        // allocate memory for encoding
+        // allocate memory
         pki = xmalloc(pkiLen);
 
-        // export public key
+        // export public key info
         if (CryptExportPublicKeyInfo(rsa->prov, AT_KEYEXCHANGE,
             X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
             pki, &pkiLen))
         {
-          // convert to DER format
-          CryptEncodeObjectEx(
+          // get size of DER encoding
+          if (CryptEncodeObjectEx(
             X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
             X509_PUBLIC_KEY_INFO, pki, 0,
-            NULL, NULL, &derLen);
+            NULL, NULL, &derLen))
+          {
+            derData = xmalloc(derLen);
+            // convert to DER format 
+            ok = CryptEncodeObjectEx(
+              X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+              X509_PUBLIC_KEY_INFO, pki, 0,
+              NULL, derData, &derLen);
 
-          derData = xmalloc(derLen);
-
-          CryptEncodeObjectEx(
-            X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
-            X509_PUBLIC_KEY_INFO, pki, 0,
-            NULL, derData, &derLen);
-
-          // write to PEM file
-          rsa_write_pem(RSA_PUBLIC_KEY, derData, derLen, ofile);
-          xfree(derData);
-        } else xstrerror ("\nCryptExportPublicKeyInfo");
-      } else xstrerror ("\nCryptExportPublicKeyInfo");
+            // write to PEM file
+            if (ok) {
+              rsa_write_pem(RSA_PUBLIC_KEY, derData, derLen, ofile);
+              xfree(derData);
+            }
+          }
+        } 
+      }
     } else {
+      // get length of PKCS#8 encoding
       if (CryptExportPKCS8(rsa->prov, AT_KEYEXCHANGE,
           szOID_RSA_RSA, 0, NULL, NULL, &pkiLen))
       {
@@ -352,17 +334,20 @@ int rsa_write_key(RSA* rsa,
 
         if (pki != NULL)
         {
-          CryptExportPKCS8(rsa->prov, AT_KEYEXCHANGE,
+          // export the private key
+          ok = CryptExportPKCS8(rsa->prov, AT_KEYEXCHANGE,
             szOID_RSA_RSA, 0x8000, NULL,
             pki, &pkiLen);
 
           // write key to PEM file
-          rsa_write_pem(RSA_PRIVATE_KEY, pki, pkiLen, ofile);
+          if (ok) {
+            rsa_write_pem(RSA_PRIVATE_KEY, pki, pkiLen, ofile);            
+          }
           xfree(pki);
         }
       }
     }
-    return 1;
+    return ok;
 }
 
 /**
@@ -379,9 +364,8 @@ int rsa_hash(RSA* rsa, const char* ifile)
     ULONGLONG len;
     HANDLE    hFile, hMap;
     DWORD     r;
+    BOOL      ok=FALSE;
 
-    rsa->error = ERROR_SUCCESS;
-    
     // destroy hash object if already created
     if (rsa->hash != 0) {
       CryptDestroyHash(rsa->hash);
@@ -418,7 +402,8 @@ int rsa_hash(RSA* rsa, const char* ifile)
               {
                 r = (len < 8192) ? len : 8192;
                 // hash input for every 8192 bytes or whatever remains
-                if (!CryptHashData (rsa->hash, p, r, 0)) break;
+                ok = CryptHashData (rsa->hash, p, r, 0);
+                if (!ok) break;
                   
                 len -= r;  // update length
                 p   += r;  // update position in file
@@ -431,7 +416,7 @@ int rsa_hash(RSA* rsa, const char* ifile)
       }
       CloseHandle (hFile);
     }
-    return rsa->error == ERROR_SUCCESS;
+    return ok;
 }
 
 /**
@@ -465,13 +450,12 @@ int rsa_sign(RSA* rsa,
               NULL, 0, sig, &sigLen))
           {
             // convert binary to PEM format and write to file
-            rsa_write_pem(RSA_SIGNATURE, sig, sigLen, sfile);
-            ok=TRUE;
+            ok = rsa_write_pem(RSA_SIGNATURE, sig, sigLen, sfile);
           }
           xfree(sig);
         }
-      } else xstrerror("CryptSignHash");
-    } else printf ("rsa_hash");
+      }
+    } 
     return ok;
 }
 
@@ -501,8 +485,7 @@ int rsa_verify(RSA* rsa,
       {    
         // verify signature using public key
         ok = CryptVerifySignature (rsa->hash, sig, 
-                    sigLen, rsa->pubkey, NULL, 0); 
-        xstrerror("CryptVerifySignature");                    
+                    sigLen, rsa->pubkey, NULL, 0);                  
       }
     }      
     return ok;            
