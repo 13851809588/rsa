@@ -41,7 +41,7 @@ RSA* rsa_open(void)
 
     if (CryptAcquireContext(&prov,
         NULL, NULL, PROV_RSA_AES,
-        CRYPT_VERIFYCONTEXT | CRYPT_SILENT))// | CRYPT_MACHINE_KEYSET))
+        CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
     {
       rsa = xmalloc(sizeof(RSA));
       if (rsa != NULL) {
