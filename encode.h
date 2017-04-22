@@ -43,8 +43,8 @@
 extern "C" {
 #endif
 
-  const char* bintob64 (LPVOID, DWORD, DWORD);
-  LPVOID b64tobin (const char*, DWORD, DWORD, PDWORD); 
+  const char* bin2str (LPVOID, DWORD, DWORD);
+  LPVOID str2bin (const char*, DWORD, DWORD, PDWORD); 
  
 #ifdef __cplusplus
 }

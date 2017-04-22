@@ -130,7 +130,7 @@ int rsa_genkey(RSA* rsa, int keyLen)
 int rsa_write_pem(int pemType, 
     LPVOID data, DWORD dataLen, const char* ofile)
 {
-    const char *s, *e, *b64;
+    const char *s=NULL, *e=NULL, *b64;
     FILE       *out;
     BOOL       ok=FALSE;
 
@@ -145,7 +145,7 @@ int rsa_write_pem(int pemType,
       e = "-----END RSA SIGNATURE-----\n";
     }
 
-    b64 = bintob64(data, dataLen, 
+    b64 = bin2str(data, dataLen, 
         CRYPT_STRING_BASE64 | CRYPT_STRING_NOCR);
 
     if (b64 != NULL) {
@@ -190,7 +190,7 @@ LPVOID rsa_read_pem(const char* ifile, PDWORD binLen)
         // read data
         fread(pem, sizeof(char), st.st_size, in);
 
-        bin = b64tobin(pem, strlen(pem), 
+        bin = str2bin(pem, strlen(pem), 
             CRYPT_STRING_BASE64HEADER, binLen); 
         xfree(pem);            
       }

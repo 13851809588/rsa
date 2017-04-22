@@ -31,10 +31,14 @@
   
 /**
  *
- * convert base64 string to binary
+ * convert string to binary
  *
  */    
-LPVOID b64tobin (const char *in, DWORD inLen, DWORD flags, PDWORD outLen) 
+LPVOID str2bin (
+    const char *in, 
+    DWORD inLen, 
+    DWORD flags, 
+    PDWORD outLen) 
 {
     LPVOID out = NULL;
     
@@ -55,24 +59,24 @@ LPVOID b64tobin (const char *in, DWORD inLen, DWORD flags, PDWORD outLen)
 
 /**
  *
- * convert binary to base64 string
+ * convert binary to string
  *
  */  
-const char* bintob64 (LPVOID in, DWORD inLen, DWORD flags) 
+const char* bin2str (LPVOID in, DWORD inLen, DWORD flags) 
 {
     DWORD  outLen;
     LPVOID out = NULL;
     
     // calculate space for string
     if (CryptBinaryToString(in, inLen, 
-        CRYPT_STRING_BASE64 | flags, NULL, &outLen))
+        flags, NULL, &outLen))
     {
       out = xmalloc(outLen);
       
       // convert it
       if (out != NULL) {
         CryptBinaryToString(in, inLen,  
-            CRYPT_STRING_BASE64 | flags, out, &outLen);
+            flags, out, &outLen);
       }
     }
     return out;

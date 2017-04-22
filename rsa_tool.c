@@ -29,7 +29,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 
 #include <shlwapi.h>
@@ -41,25 +41,25 @@
 
 void xstrerror (char *fmt, ...) 
 {
-  char    *error=NULL;
-  va_list arglist;
-  char    buffer[2048];
-  DWORD   dwError=GetLastError();
-  
-  va_start (arglist, fmt);
-  wvnsprintf (buffer, sizeof(buffer) - 1, fmt, arglist);
-  va_end (arglist);
-  
-  if (FormatMessage (
-      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-      NULL, dwError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-      (LPSTR)&error, 0, NULL))
-  {
-    printf ("\n  [ %s : %s", buffer, error);
-    LocalFree (error);
-  } else {
-    printf ("\n  [ %s : %i", buffer, dwError);
-  }
+    char    *error=NULL;
+    va_list arglist;
+    char    buffer[2048];
+    DWORD   dwError=GetLastError();
+    
+    va_start (arglist, fmt);
+    wvnsprintf (buffer, sizeof(buffer) - 1, fmt, arglist);
+    va_end (arglist);
+    
+    if (FormatMessage (
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL, dwError, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+        (LPSTR)&error, 0, NULL))
+    {
+      printf ("\n  [ %s : %s", buffer, error);
+      LocalFree (error);
+    } else {
+      printf ("\n  [ %s : %ld", buffer, dwError);
+    }
 }
 
 /**
@@ -178,9 +178,9 @@ int main(int argc, char *argv[])
 {
     int  i, g=0, s=0, v=0, bitlen;
     char opt;
-    char *bits=NULL, *priv="private.pem", 
-         *pub="public.pem",  *out=NULL, *sig=NULL, 
-         *in=NULL, *file=NULL;
+    char *priv="private.pem", 
+         *pub="public.pem", *sig=NULL, 
+         *file=NULL;
     
     puts ("\n  [ RSA Tool v0.1"
           "\n  [ copyright (c) 2017 @odzhancode\n");
