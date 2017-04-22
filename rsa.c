@@ -40,8 +40,8 @@ RSA* rsa_open(void)
     RSA        *rsa=NULL;
 
     if (CryptAcquireContext(&prov,
-        NULL, NULL, PROV_RSA_AES,
-        CRYPT_VERIFYCONTEXT | CRYPT_SILENT))
+        NULL, NULL, PROV_RSA_FULL,
+        CRYPT_VERIFYCONTEXT | CRYPT_SILENT | CRYPT_MACHINE_KEYSET))
     {
       rsa = xmalloc(sizeof(RSA));
       if (rsa != NULL) {
@@ -73,9 +73,11 @@ void rsa_close(RSA *rsa)
     }
 
     // release csp
-    CryptReleaseContext(rsa->prov, 0);
-    rsa->prov = 0;
-
+    if (rsa->prov != 0) {
+      CryptReleaseContext(rsa->prov, 0);
+      rsa->prov = 0;
+    }
+    
     // release object
     xfree(rsa);
 }
@@ -89,18 +91,19 @@ int rsa_genkey(RSA* rsa, int keyLen)
 {
     if (rsa==NULL) return -1;
 
-    // release private key if already created
+    // release public
+    if (rsa->pubkey != 0) {
+      CryptDestroyKey(rsa->pubkey);
+      rsa->pubkey = 0;
+    }
+      
+    // release private
     if (rsa->privkey != 0) {
       CryptDestroyKey(rsa->privkey);
       rsa->privkey = 0;
-      // release public aswell if required
-      if (rsa->pubkey != 0) {
-        CryptDestroyKey(rsa->pubkey);
-        rsa->pubkey = 0;
-      }
     }
 
-    // generate key pair
+    // generate key pair for signing
     CryptGenKey(rsa->prov, CALG_RSA_SIGN,
       (keyLen << 16) | CRYPT_EXPORTABLE,
       &rsa->privkey);
@@ -123,6 +126,7 @@ int rsa_write_pem(int pemType,
 {
     const char *s, *e, *b64;
     FILE       *out;
+    BOOL       ok=FALSE;
 
     if (pemType == RSA_PRIVATE_KEY) {
       s = "-----BEGIN PRIVATE KEY-----\n";
@@ -137,8 +141,6 @@ int rsa_write_pem(int pemType,
 
     b64 = bintob64(data, dataLen, CRYPT_STRING_NOCR);
 
-    printf ("\nok %s", b64);
-    
     if (b64 != NULL) {
       out = fopen(ofile, "wb");
 
@@ -147,9 +149,10 @@ int rsa_write_pem(int pemType,
         fwrite(b64, strlen(b64), 1, out);
         fwrite(e, strlen(e), 1, out);
         fclose(out);
+        ok=TRUE;
       }
     }
-    return 1;
+    return ok;
 }
 
 /**
@@ -203,7 +206,10 @@ int rsa_read_key(RSA* rsa,
     LPVOID                  derData, keyData;
     PCRYPT_PRIVATE_KEY_INFO pki = 0;
     DWORD                   pkiLen, derLen, keyLen;
-
+    BOOL                    ok=FALSE;
+    
+    rsa->error = ERROR_SUCCESS;
+    
     // decode base64 string ignoring headers
     derData = rsa_read_pem(ifile, &derLen);
 
@@ -212,18 +218,20 @@ int rsa_read_key(RSA* rsa,
       // is it a public key?
       if (pemType == RSA_PUBLIC_KEY) {
 
-        CryptDecodeObjectEx(
-          X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
-          X509_PUBLIC_KEY_INFO, derData, derLen,
-          CRYPT_DECODE_ALLOC_FLAG, NULL,
-          &keyData, &keyLen);
+        if (CryptDecodeObjectEx(
+            X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+            X509_PUBLIC_KEY_INFO, derData, derLen,
+            CRYPT_DECODE_ALLOC_FLAG, NULL,
+            &keyData, &keyLen))
+        {
 
-        // if decode ok, import it
-        CryptImportKey(rsa->prov, keyData, keyLen,
-            0, CRYPT_EXPORTABLE, &rsa->pubkey);
+          // if decode ok, import it
+          ok = CryptImportKey(rsa->prov, keyData, keyLen,
+                   0, CRYPT_EXPORTABLE, &rsa->pubkey);
 
-        // release allocated memory
-        LocalFree(keyData);
+          // release allocated memory
+          LocalFree(keyData);
+        }
       } else {
         // convert the PKCS#8 data to private key info
         if (CryptDecodeObjectEx(
@@ -233,21 +241,24 @@ int rsa_read_key(RSA* rsa,
               NULL, &pki, &pkiLen))
         {
           // then convert the private key to private key blob
-          CryptDecodeObjectEx(
-            X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
-            PKCS_RSA_PRIVATE_KEY,
-            pki->PrivateKey.pbData,
-            pki->PrivateKey.cbData,
-            CRYPT_DECODE_ALLOC_FLAG, NULL,
-            &keyData, &keyLen);
+          if (CryptDecodeObjectEx(
+              X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+              PKCS_RSA_PRIVATE_KEY,
+              pki->PrivateKey.pbData,
+              pki->PrivateKey.cbData,
+              CRYPT_DECODE_ALLOC_FLAG, NULL,
+              &keyData, &keyLen))
+          {  
 
-          // if decode ok, import it
-          CryptImportKey(rsa->prov, keyData, keyLen,
-              0, CRYPT_EXPORTABLE, &rsa->privkey);
-
-          // release data
-          LocalFree(keyData);
-          LocalFree(pki);
+            // if decode ok, import it
+            ok = CryptImportKey(rsa->prov, keyData, keyLen,
+                0, CRYPT_EXPORTABLE, &rsa->privkey);
+                
+            // release data
+            LocalFree(keyData);
+          }
+          // release private key info
+          LocalFree(pki);          
         }
       }
       xfree(derData);
@@ -297,7 +308,6 @@ int rsa_write_key(RSA* rsa,
             X509_PUBLIC_KEY_INFO, pki, 0,
             NULL, derData, &derLen);
 
-            printf ("\nwriting");
           // write to PEM file
           rsa_write_pem(RSA_PUBLIC_KEY, derData, derLen, ofile);
           xfree(derData);
@@ -405,7 +415,7 @@ int rsa_hash(RSA* rsa, const char* ifile)
 int rsa_sign(RSA* rsa, 
     const char* ifile, const char* sfile)
 {
-    DWORD  sigLen;
+    DWORD  sigLen=0;
     LPVOID sig;
     BOOL   ok=FALSE;
     
@@ -425,11 +435,12 @@ int rsa_sign(RSA* rsa,
           {
             // convert binary to PEM format and write to file
             rsa_write_pem(RSA_SIGNATURE, sig, sigLen, sfile);
+            ok=TRUE;
           }
           xfree(sig);
         }
-      }
-    }
+      } else printf ("cy %08X", GetLastError());
+    } else printf ("rsa_hash");
     return ok;
 }
 
@@ -449,7 +460,7 @@ int rsa_verify(RSA* rsa,
     LPVOID sig;
     BOOL   ok=FALSE;
     
-    // convert PEM data in file to binary
+    // convert PEM data to binary
     sig = rsa_read_pem(sfile, &sigLen);
     
     if (sig != NULL)

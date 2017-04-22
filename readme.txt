@@ -13,3 +13,5 @@
 
   openssl base64 -d -in <signature> -out /tmp/sign.sha256
   openssl dgst -sha256 -verify <pub-key> -signature /tmp/sign.sha256 <file>  
+  
+ifinee  
