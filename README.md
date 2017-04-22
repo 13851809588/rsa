@@ -22,17 +22,19 @@ This should compile without error using msvc.bat or mingw.bat (provided you have
 
 ## Usage ##
 
+![alt text](https://github.com/odzhan/rsa/blob/master/img/usage.png)
+
 * **Generating RSA Key**
  
 Before anything else, generate an RSA key pair. Crypto API will determine if the key length you provide is acceptable.
 
-![alt text](https://github.com/odzhan/shellcode/blob/master/win/ss/pi.png)
+![alt text](https://github.com/odzhan/rsa/blob/master/img/generate.png)
 
 * **Signing a file**
 
 Simply supply a process name/process id along with PIC/DLL file or command line. Let's say we want to inject code into internet explorer.
 
-![alt text](https://github.com/odzhan/shellcode/blob/master/win/ss/pi.png)
+![alt text](https://github.com/odzhan/rsa/blob/master/img/sign.png)
 
 * **Verifying a file**
 
