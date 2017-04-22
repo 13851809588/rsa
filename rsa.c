@@ -64,7 +64,7 @@ void rsa_close(RSA *rsa)
       CryptDestroyHash(rsa->hash);
       rsa->hash = 0;
     }
-    
+
     // release private key
     if (rsa->privkey != 0) {
       CryptDestroyKey(rsa->privkey);
@@ -82,7 +82,7 @@ void rsa_close(RSA *rsa)
       CryptReleaseContext(rsa->prov, 0);
       rsa->prov = 0;
     }
-    
+
     // release object
     xfree(rsa);
 }
@@ -95,7 +95,7 @@ void rsa_close(RSA *rsa)
 int rsa_genkey(RSA* rsa, int keyLen)
 {
     BOOL ok = FALSE;
-    
+
     if (rsa==NULL) return 0;
 
     // release public
@@ -103,7 +103,7 @@ int rsa_genkey(RSA* rsa, int keyLen)
       CryptDestroyKey(rsa->pubkey);
       rsa->pubkey = 0;
     }
-      
+
     // release private
     if (rsa->privkey != 0) {
       CryptDestroyKey(rsa->privkey);
@@ -127,7 +127,7 @@ int rsa_genkey(RSA* rsa, int keyLen)
  * rsa     : RSA object with public and private keys
  *
  */
-int rsa_write_pem(int pemType, 
+int rsa_write_pem(int pemType,
     LPVOID data, DWORD dataLen, const char* ofile)
 {
     const char *s=NULL, *e=NULL, *b64;
@@ -145,7 +145,7 @@ int rsa_write_pem(int pemType,
       e = "-----END RSA SIGNATURE-----\n";
     }
 
-    b64 = bin2str(data, dataLen, 
+    b64 = bin2str(data, dataLen,
         CRYPT_STRING_BASE64 | CRYPT_STRING_NOCR);
 
     if (b64 != NULL) {
@@ -171,7 +171,7 @@ int rsa_write_pem(int pemType,
  * rsa     : RSA object with public and private keys
  *
  */
-LPVOID rsa_read_pem(const char* ifile, PDWORD binLen) 
+LPVOID rsa_read_pem(const char* ifile, PDWORD binLen)
 {
     FILE        *in;
     struct stat st;
@@ -190,9 +190,9 @@ LPVOID rsa_read_pem(const char* ifile, PDWORD binLen)
         // read data
         fread(pem, sizeof(char), st.st_size, in);
 
-        bin = str2bin(pem, strlen(pem), 
-            CRYPT_STRING_BASE64HEADER, binLen); 
-        xfree(pem);            
+        bin = str2bin(pem, strlen(pem),
+            CRYPT_STRING_BASE64HEADER, binLen);
+        xfree(pem);
       }
       fclose(in);
     }
@@ -208,14 +208,14 @@ LPVOID rsa_read_pem(const char* ifile, PDWORD binLen)
  * rsa     : RSA object with public and private keys
  *
  */
-int rsa_read_key(RSA* rsa, 
-    const char* ifile, int pemType) 
+int rsa_read_key(RSA* rsa,
+    const char* ifile, int pemType)
 {
     LPVOID                  derData, keyData;
     PCRYPT_PRIVATE_KEY_INFO pki = 0;
     DWORD                   pkiLen, derLen, keyLen;
     BOOL                    ok=FALSE;
-    
+
     // decode base64 string ignoring headers
     derData = rsa_read_pem(ifile, &derLen);
 
@@ -232,12 +232,12 @@ int rsa_read_key(RSA* rsa,
         {
 
           // if decode ok, import it
-          ok = CryptImportPublicKeyInfo(rsa->prov, X509_ASN_ENCODING, 
+          ok = CryptImportPublicKeyInfo(rsa->prov, X509_ASN_ENCODING,
             (PCERT_PUBLIC_KEY_INFO)keyData, &rsa->pubkey);
 
           // release allocated memory
           LocalFree(keyData);
-        } 
+        }
       } else {
         // convert the PKCS#8 data to private key info
         if (CryptDecodeObjectEx(
@@ -254,21 +254,21 @@ int rsa_read_key(RSA* rsa,
               pki->PrivateKey.cbData,
               CRYPT_DECODE_ALLOC_FLAG, NULL,
               &keyData, &keyLen))
-          {  
+          {
 
             // if decode ok, import it
             ok = CryptImportKey(rsa->prov, keyData, keyLen,
                 0, CRYPT_EXPORTABLE, &rsa->privkey);
-            
+
             // release data
             LocalFree(keyData);
-          } 
+          }
           // release private key info
-          LocalFree(pki);          
-        } 
+          LocalFree(pki);
+        }
       }
       xfree(derData);
-    } 
+    }
     return ok;
 }
 
@@ -281,13 +281,13 @@ int rsa_read_key(RSA* rsa,
  * rsa     : RSA object with public and private keys
  *
  */
-int rsa_write_key(RSA* rsa, 
-    const char* ofile, int pemType) 
+int rsa_write_key(RSA* rsa,
+    const char* ofile, int pemType)
 {
     DWORD  pkiLen, derLen;
     LPVOID pki, derData;
     BOOL   ok=FALSE;
-    
+
     // public key?
     if (pemType == RSA_PUBLIC_KEY)
     {
@@ -311,7 +311,7 @@ int rsa_write_key(RSA* rsa,
             NULL, NULL, &derLen))
           {
             derData = xmalloc(derLen);
-            // convert to DER format 
+            // convert to DER format
             ok = CryptEncodeObjectEx(
               X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
               X509_PUBLIC_KEY_INFO, pki, 0,
@@ -323,7 +323,7 @@ int rsa_write_key(RSA* rsa,
               xfree(derData);
             }
           }
-        } 
+        }
       }
     } else {
       // get length of PKCS#8 encoding
@@ -341,7 +341,7 @@ int rsa_write_key(RSA* rsa,
 
           // write key to PEM file
           if (ok) {
-            rsa_write_pem(RSA_PRIVATE_KEY, pki, pkiLen, ofile);            
+            rsa_write_pem(RSA_PRIVATE_KEY, pki, pkiLen, ofile);
           }
           xfree(pki);
         }
@@ -373,14 +373,15 @@ int rsa_hash(RSA* rsa, const char* ifile)
     }
 
     // try open the file for reading
-    hFile = CreateFile (ifile, GENERIC_READ, FILE_SHARE_READ,
-        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = CreateFile (ifile, GENERIC_READ, 
+        FILE_SHARE_READ, NULL, OPEN_EXISTING, 
+        FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hFile != INVALID_HANDLE_VALUE) {
       // make sure we have something to hash
       GetFileSizeEx (hFile, (PLARGE_INTEGER)&len);
       if (len != 0)
-      {        
+      {
         // create a file mapping handle
         hMap = CreateFileMapping (hFile, NULL,
             PAGE_READONLY, 0, 0, NULL);
@@ -395,16 +396,16 @@ int rsa_hash(RSA* rsa, const char* ifile)
             // create SHA-256 hash object
             if (CryptCreateHash (rsa->prov,
                 CALG_SHA_256, 0, 0, &rsa->hash))
-            {              
+            {
               p = data;
               // while data available
               while (len)
               {
                 r = (len < 8192) ? len : 8192;
-                // hash input for every 8192 bytes or whatever remains
+                // absorb 8192 bytes or whatever remains
                 ok = CryptHashData (rsa->hash, p, r, 0);
                 if (!ok) break;
-                  
+
                 len -= r;  // update length
                 p   += r;  // update position in file
               }
@@ -412,7 +413,7 @@ int rsa_hash(RSA* rsa, const char* ifile)
             UnmapViewOfFile ((LPCVOID)data);
           }
           CloseHandle (hMap);
-        }        
+        }
       }
       CloseHandle (hFile);
     }
@@ -428,65 +429,70 @@ int rsa_hash(RSA* rsa, const char* ifile)
  * rsa    : RSA object with private key
  *
  */
-int rsa_sign(RSA* rsa, 
+int rsa_sign(RSA* rsa,
     const char* ifile, const char* sfile)
 {
     DWORD  sigLen=0;
     LPVOID sig;
     BOOL   ok=FALSE;
-    
-    // calculate sha256 hash for file 
+
+    // calculate sha256 hash for file
     if (rsa_hash(rsa, ifile))
-    {    
+    {
       // acquire length of signature
-      if (CryptSignHash (rsa->hash, AT_KEYEXCHANGE,
-          NULL, 0, NULL, &sigLen))
+      if (CryptSignHash (rsa->hash, 
+          AT_KEYEXCHANGE, NULL, 0, 
+          NULL, &sigLen))
       {
         sig = xmalloc (sigLen);
         if (sig != NULL)
         {
           // obtain signature
-          if (CryptSignHash (rsa->hash, AT_KEYEXCHANGE, 
-              NULL, 0, sig, &sigLen))
+          if (CryptSignHash (rsa->hash, 
+              AT_KEYEXCHANGE, NULL, 0, 
+              sig, &sigLen))
           {
-            // convert binary to PEM format and write to file
-            ok = rsa_write_pem(RSA_SIGNATURE, sig, sigLen, sfile);
+            // convert 2 PEM format + write 2 file
+            ok = rsa_write_pem(RSA_SIGNATURE, 
+                sig, sigLen, sfile);
           }
           xfree(sig);
         }
       }
-    } 
+    }
     return ok;
 }
 
 /**
  *
- *         verify a signature using public key 
+ *         verify a signature using public key
  *
  * sfile : file with signature encoded in PEM format
  * ifile : file with data to verify signature for
  * rsa   : RSA object with public key
  *
  */
-int rsa_verify(RSA* rsa, 
-    const char* ifile, const char* sfile)
+int rsa_verify(
+    RSA* rsa,
+    const char* ifile, 
+    const char* sfile)
 {
     DWORD  sigLen;
     LPVOID sig;
     BOOL   ok=FALSE;
-    
+
     // convert PEM data to binary
     sig = rsa_read_pem(sfile, &sigLen);
-    
+
     if (sig != NULL)
     {
-      // calculate sha256 hash of file 
+      // calculate sha256 hash of file
       if (rsa_hash(rsa, ifile))
-      {    
+      {
         // verify signature using public key
-        ok = CryptVerifySignature (rsa->hash, sig, 
-                    sigLen, rsa->pubkey, NULL, 0);                  
+        ok = CryptVerifySignature (rsa->hash, sig,
+              sigLen, rsa->pubkey, NULL, 0);
       }
-    }      
-    return ok;            
+    }
+    return ok;
 }

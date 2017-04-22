@@ -1,12 +1,12 @@
 
 ## About ##
 
-rsa_tool provides a working example in C of how to use Microsoft Crypto API to use RSA private and public keys to digitally sign and verify the integrity of files.
+rsa_tool provides a working example in C of how to use Microsoft Crypto API to digitally sign and verify the integrity of files using the RSA digital signature algorithm.
 
 The private and public keys must be stored in PEM (Privacy Exchange Mail) format.
-Signatures should be stored as Base64 which is essentially same as PEM except you don't require specific headers for the signature.
+Signatures should be stored in Base64 format which is essentially the same as PEM except you don't require any headers or special formatting.
 
-See more info about tool and how it works [here](http://stosd.wordpress.com/capi-openssl/)
+See more info about tool and how it works [here](https://stosd.wordpress.com/2017/04/22/capi-openssl/)
 
 ## Building ##
 
