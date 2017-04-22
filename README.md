@@ -18,7 +18,7 @@ This should compile without error using msvc.bat or mingw.bat (provided you have
 
 * **Mingw**
 	
-	cl /O2 /Os rsa_tool.c rsa.c encode.c memory.c -lcrypt32 -lshlwapi -orsa_tool
+	gcc -O2 -Os rsa_tool.c rsa.c encode.c memory.c -lcrypt32 -lshlwapi -orsa_tool
 
 ## Usage ##
 
